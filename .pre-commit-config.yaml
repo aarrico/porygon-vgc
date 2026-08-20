@@ -8,3 +8,12 @@ repos:
         additional_dependencies: ["github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2"]
         pass_filenames: false
         files: ^backend/.*\.go$
+      # Same gate CI runs, caught locally before a push instead of after.
+      # `pre-commit install --hook-type pre-push` wires this in (README has
+      # the one-time setup step).
+      - id: verify
+        name: make verify (backend build+vet+test+lint+fmt)
+        entry: make verify
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

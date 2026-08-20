@@ -1,0 +1,35 @@
+# The build context is backend/. Everything here either must not reach the
+# image (secrets) or only busts the layer cache.
+
+# Secrets and local overrides
+.env
+.env.*
+*.pem
+*.key
+
+# Build output
+/bin/
+/out/
+/dist/
+# Root-anchored so cmd/api/ is not excluded.
+/api
+/etl
+
+# Test and tooling artefacts
+*.test
+*.out
+coverage.*
+
+# Editor and OS state
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+
+# Docs and VCS noise — nothing the compiler reads
+Dockerfile
+.dockerignore
+**/README.md
+.git/
+.gitignore

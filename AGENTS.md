@@ -21,9 +21,10 @@ Pokemon VGC team-building tool: Pokedex/effect search, damage calc, team recomme
 
 ## Running and verifying
 
-- `pre-commit install` once, after cloning — wires up the `golangci-lint` pre-commit hook (`.pre-commit-config.yaml`), scoped to `backend/*.go` only.
-- TODO: `cd backend && go test ./...` — once `go.mod` exists.
-- TODO: `docker compose -f deploy/compose/docker-compose.yml up` — once the compose file exists.
+- `pre-commit install && pre-commit install --hook-type pre-push` once, after cloning — wires up two local git hooks from `.pre-commit-config.yaml`: `golangci-lint` on commit (scoped to `backend/*.go`), `make verify` on push (build+vet+test+lint+gofmt, same gate CI runs).
+- `make verify` — build+vet+test+lint+gofmt, run from repo root.
+- `make up` / `make health` / `make down` — bring up the Compose stack, hit `/healthz`, tear down.
+- CI: `.github/workflows/ci.yml` runs on every push/PR to `main` — a `verify` job (same as `make verify`) followed by an `integration` job that runs the real Compose stack and checks the health/404/Postgres-down rows from Story 1.1a's I/O matrix. Both are required status checks on `main` (branch protection).
 
 ## Conventions that differ from defaults
 
