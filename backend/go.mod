@@ -2,7 +2,11 @@ module github.com/aarrico/porygon-vgc/backend
 
 go 1.26.6
 
-require github.com/jackc/pgx/v5 v5.10.0
+require (
+	github.com/felixge/httpsnoop v1.1.0
+	github.com/go-chi/chi/v5 v5.3.2
+	github.com/jackc/pgx/v5 v5.10.0
+)
 
 require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect
