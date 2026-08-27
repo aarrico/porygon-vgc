@@ -42,13 +42,13 @@ func readTable(name string, required ...string) ([]record, error) {
 	}
 
 	var out []record
-	for line := 2; ; line++ {
+	for {
 		row, err := r.Read()
 		if errors.Is(err, io.EOF) {
 			return out, nil
 		}
 		if err != nil {
-			return nil, fmt.Errorf("etl: %s.csv line %d: %w", name, line, err)
+			return nil, fmt.Errorf("etl: %s.csv: %w", name, err)
 		}
 		rec := make(record, len(index))
 		for col, i := range index {
@@ -100,6 +100,16 @@ func (p *parser) optNum(col string) *int32 {
 	return &v
 }
 
-func (p *parser) flag(col string) bool { return p.rec[col] == "1" }
+func (p *parser) flag(col string) bool {
+	switch p.rec[col] {
+	case "1":
+		return true
+	case "0":
+		return false
+	default:
+		p.fail(col, "is not 0 or 1")
+		return false
+	}
+}
 
 func (p *parser) done() error { return p.err }

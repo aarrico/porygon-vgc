@@ -40,10 +40,27 @@ services:
         condition: service_healthy
     restart: "no"
 
+  # Profile-gated: a load is deliberate, never part of bringing the stack up.
+  etl:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+      target: etl
+    environment:
+      DATABASE_URL: ${ETL_DATABASE_URL:?set ETL_DATABASE_URL in deploy/compose/.env}
+      DATA_SET: ${DATA_SET:-gen-9}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    profiles: ["etl"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
+
   api:
     build:
       context: ../../backend
       dockerfile: Dockerfile
+      target: api
     environment:
       DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL in deploy/compose/.env}
       # Container-internal bind is fixed so the healthcheck below stays valid;

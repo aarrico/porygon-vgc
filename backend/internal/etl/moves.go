@@ -3,16 +3,23 @@ package etl
 import (
 	"context"
 	"fmt"
-	"strconv"
 )
 
-// PokeAPI numbers side-game entities above this. For moves those are the
-// Colosseum/XD shadow moves, the only ones with no PP.
+// PokeAPI numbers non-battle entities above this: for moves the Colosseum/XD
+// shadow moves (the only ones with no PP), for types the pseudo-types
+// "unknown" and "shadow".
 const sideGameID = 10000
 
-func mainSeries(r record) bool {
-	id, err := strconv.Atoi(r["id"])
-	return err == nil && id < sideGameID
+// mainSeries reports whether r belongs to the main series rather than a
+// side-game entity. A malformed id fails loudly instead of being treated as
+// a side-game entity to skip, since the two are otherwise indistinguishable.
+func mainSeries(table string, r record) (bool, error) {
+	p := r.parse(table)
+	id := p.num("id")
+	if err := p.done(); err != nil {
+		return false, err
+	}
+	return id < sideGameID, nil
 }
 
 func (l *loader) loadMoves(ctx context.Context) error {
@@ -46,7 +53,11 @@ func (l *loader) loadMoves(ctx context.Context) error {
 
 	kept := make([]record, 0, len(rows))
 	for _, r := range rows {
-		if !mainSeries(r) {
+		main, err := mainSeries("moves", r)
+		if err != nil {
+			return err
+		}
+		if !main {
 			continue
 		}
 		kept = append(kept, r)
@@ -135,7 +146,7 @@ func (l *loader) loadMoveMeta(ctx context.Context) error {
 	for _, r := range rows {
 		move, ok := l.move[r["move_id"]]
 		if !ok {
-			continue // meta for a shadow move that was skipped
+			return fmt.Errorf("move_meta: no row for move_id %q", r["move_id"])
 		}
 		p := r.parse("move_meta")
 		drain, healing, critRate := p.num("drain"), p.num("healing"), p.num("crit_rate")
@@ -177,7 +188,7 @@ func (l *loader) loadMoveStatChanges(ctx context.Context) error {
 	for _, r := range rows {
 		move, ok := l.move[r["move_id"]]
 		if !ok {
-			continue
+			return fmt.Errorf("move_stat_change: no row for move_id %q", r["move_id"])
 		}
 		p := r.parse("move_meta_stat_changes")
 		change := p.num("change")
@@ -245,6 +256,16 @@ func (l *loader) loadItems(ctx context.Context) error {
 			category = EXCLUDED.category,
 			fling_power = EXCLUDED.fling_power`
 
+	// PokeAPI ships roseli-berry twice (ids 723/2279), differing only in an
+	// unstored `cost` column. Any other duplicate identifier must agree on
+	// every stored column too, or the second row would silently overwrite
+	// the first's data via ON CONFLICT.
+	type seenItem struct {
+		category   string
+		flingPower *int32
+	}
+	seen := make(map[string]seenItem, len(rows))
+
 	for _, r := range rows {
 		p := r.parse("items")
 		identifier, flingPower := p.text("identifier"), p.optNum("fling_power")
@@ -255,11 +276,24 @@ func (l *loader) loadItems(ctx context.Context) error {
 		if !ok {
 			return fmt.Errorf("%s: unknown category_id %q", identifier, r["category_id"])
 		}
+		if prev, dup := seen[identifier]; dup {
+			if prev.category != category || !equalOptNum(prev.flingPower, flingPower) {
+				return fmt.Errorf("%s: duplicate rows disagree on category/fling_power", identifier)
+			}
+		}
+		seen[identifier] = seenItem{category, flingPower}
 		if err := l.exec(ctx, "item", q, l.dataSet, identifier, category, flingPower); err != nil {
 			return fmt.Errorf("%s: %w", identifier, err)
 		}
 	}
 	return nil
+}
+
+func equalOptNum(a, b *int32) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
 }
 
 // lookupTable reads a PokeAPI id -> identifier CSV whose values land in the

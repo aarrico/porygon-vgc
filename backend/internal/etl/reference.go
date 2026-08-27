@@ -16,6 +16,10 @@ const (
 	statSpeed          = "6"
 )
 
+var allStats = [...]string{
+	statHP, statAttack, statDefense, statSpecialAttack, statSpecialDefense, statSpeed,
+}
+
 func (l *loader) loadDataSet(ctx context.Context, identifier string) error {
 	const q = `INSERT INTO data_set (identifier) VALUES ($1)
 		ON CONFLICT (identifier) DO UPDATE SET identifier = EXCLUDED.identifier
@@ -44,11 +48,7 @@ func (l *loader) loadGenerations(ctx context.Context) error {
 			return err
 		}
 	}
-	byIdentifier, err := l.index(ctx, `SELECT identifier, id FROM generation`)
-	if err != nil {
-		return err
-	}
-	l.generation, err = link("generation", rows, byIdentifier)
+	l.generation, err = l.indexAndLink(ctx, "generation", rows)
 	return err
 }
 
@@ -59,7 +59,17 @@ func (l *loader) loadTypes(ctx context.Context) error {
 	}
 	const q = `INSERT INTO type (identifier, generation_id) VALUES ($1, $2)
 		ON CONFLICT (identifier) DO UPDATE SET generation_id = EXCLUDED.generation_id`
+	kept := make([]record, 0, len(rows))
 	for _, r := range rows {
+		main, err := mainSeries("types", r)
+		if err != nil {
+			return err
+		}
+		if !main {
+			continue // pseudo-type ("unknown", "shadow"), never seen in battle
+		}
+		kept = append(kept, r)
+
 		p := r.parse("types")
 		identifier := p.text("identifier")
 		if err := p.done(); err != nil {
@@ -73,11 +83,7 @@ func (l *loader) loadTypes(ctx context.Context) error {
 			return err
 		}
 	}
-	byIdentifier, err := l.index(ctx, `SELECT identifier, id FROM type`)
-	if err != nil {
-		return err
-	}
-	l.typ, err = link("type", rows, byIdentifier)
+	l.typ, err = l.indexAndLink(ctx, "type", kept)
 	return err
 }
 
@@ -98,11 +104,7 @@ func (l *loader) loadStats(ctx context.Context) error {
 			return err
 		}
 	}
-	byIdentifier, err := l.index(ctx, `SELECT identifier, id FROM stat`)
-	if err != nil {
-		return err
-	}
-	l.stat, err = link("stat", rows, byIdentifier)
+	l.stat, err = l.indexAndLink(ctx, "stat", rows)
 	return err
 }
 
@@ -232,8 +234,10 @@ func (l *loader) loadSpecies(ctx context.Context) error {
 		}
 
 		base := statsOf[r["id"]]
-		if len(base) == 0 {
-			return fmt.Errorf("%s: no base stats", identifier)
+		for _, stat := range allStats {
+			if _, ok := base[stat]; !ok {
+				return fmt.Errorf("%s: no base_stat for stat_id %q", identifier, stat)
+			}
 		}
 		if err := l.exec(ctx, "species", q,
 			identifier, nationalDex, isDefault, generation, type1, type2,

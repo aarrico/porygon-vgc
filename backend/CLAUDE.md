@@ -63,6 +63,13 @@ something to route around locally. Each `internal/*` package's own
 `README.md` names the exact ADs governing it; read that package's README
 before making a structural change to it.
 
+**Postgres write ownership is role-scoped, not blanket read-only** (AD-6)
+— the app role is read-only on core reference tables (species/moves/
+abilities/items), only the ETL role can write them; the app role has
+normal read-write on operational tables (saved teams, battle logs,
+review state). Don't assume a blanket read-only rule, and don't add
+code that has the app role write a core reference table.
+
 **No interfaces between packages by default** (AD-3). Add one only at a
 specific edge once direct coupling actually causes a real problem there —
 `postgres.Pinger` is the one existing exception, added because the

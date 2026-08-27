@@ -74,7 +74,11 @@ func TestDumpShape(t *testing.T) {
 			t.Fatal(err)
 		}
 		for _, r := range rows {
-			if r["pp"] == "" && mainSeries(r) {
+			main, err := mainSeries("moves", r)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if r["pp"] == "" && main {
 				t.Errorf("main-series move %q has no pp; move.pp is NOT NULL", r["identifier"])
 			}
 		}

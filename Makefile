@@ -11,7 +11,7 @@ WAIT_TIMEOUT ?= 120
 # verify's prerequisites are ordered; -j must not interleave them.
 .NOTPARALLEL:
 
-.PHONY: help up migrate down clean logs build vet test lint fmt tidy health verify
+.PHONY: help up migrate etl down clean logs build vet test lint fmt tidy health verify
 
 ## help: list the available targets
 help:
@@ -24,6 +24,10 @@ up:
 ## migrate: apply outstanding migrations without restarting the stack
 migrate:
 	$(COMPOSE) run --rm migrate
+
+## etl: load the pinned PokeAPI dump into the core reference schema
+etl:
+	$(COMPOSE) run --rm etl
 
 ## down: tear the stack down; the named volume is retained
 down:

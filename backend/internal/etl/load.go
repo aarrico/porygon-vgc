@@ -8,17 +8,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Summary reports the upserts applied per table. That is not always the
-// resulting row count: PokeAPI ships roseli-berry twice, differing only in a
-// column this schema does not store.
 type Summary struct {
 	DataSet string
 	Rows    map[string]int
 }
 
 // Load writes the whole dump in one transaction, so a failure at any table
-// leaves the schema exactly as it was. Re-running is a no-op on unchanged
-// data: every table upserts on its natural key.
+// leaves the schema unchanged. Re-running is a no-op on unchanged data.
 func Load(ctx context.Context, pool *pgxpool.Pool, dataSet string) (Summary, error) {
 	tx, err := pool.Begin(ctx)
 	if err != nil {
@@ -103,6 +99,16 @@ func (l *loader) index(ctx context.Context, sql string, args ...any) (map[string
 		out[identifier] = id
 	}
 	return out, rows.Err()
+}
+
+// indexAndLink is index followed by link against the same table, the common
+// shape of every simple reference-table loader (generation, type, stat).
+func (l *loader) indexAndLink(ctx context.Context, table string, rows []record) (map[string]int64, error) {
+	byIdentifier, err := l.index(ctx, `SELECT identifier, id FROM `+table)
+	if err != nil {
+		return nil, err
+	}
+	return link(table, rows, byIdentifier)
 }
 
 // link turns identifier -> id into the PokeAPI id -> id map the other CSVs need.
