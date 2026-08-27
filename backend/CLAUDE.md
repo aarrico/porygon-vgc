@@ -28,6 +28,7 @@ make test      # go test ./...          (CI runs `go test -race ./...`)
 make lint      # golangci-lint run
 make fmt       # gofmt -w .
 make tidy      # go mod tidy
+make generate  # sqlc generate — regenerate typed query code after editing internal/*/queries/*.sql
 make verify    # gofmt check + build + vet + test + lint — same gate as CI and the pre-push hook
 make up        # docker compose up, build+wait-healthy
 make health    # curl /healthz

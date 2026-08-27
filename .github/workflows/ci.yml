@@ -56,6 +56,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
       - name: seed env
         run: cp deploy/compose/.env.example deploy/compose/.env
 
@@ -145,6 +150,14 @@ jobs:
                         WHERE s.identifier = 'attack' AND msc.change = 2
                           AND m.identifier = 'swords-dance'")
           test "$hit" = "swords-dance"
+
+      - name: pokedex live-database tests
+        run: |
+          set -a
+          . deploy/compose/.env
+          set +a
+          export TEST_DATABASE_URL="postgres://porygon_app:${PORYGON_APP_PASSWORD}@127.0.0.1:${POSTGRES_PORT:-5432}/${POSTGRES_DB}?sslmode=disable"
+          cd backend && go test -race -cover ./internal/pokedex/...
 
       - name: postgres down answers 503, api stays up
         run: |

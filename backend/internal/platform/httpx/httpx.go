@@ -7,8 +7,10 @@ import (
 	"log/slog"
 	"net/http"
 	"runtime/debug"
+	"strings"
 
 	"github.com/felixge/httpsnoop"
+	"github.com/go-chi/chi/v5"
 )
 
 const ContentTypeJSON = "application/json; charset=utf-8"
@@ -55,6 +57,25 @@ func WriteJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", ContentTypeJSON)
 	w.WriteHeader(status)
 	_, _ = w.Write(body)
+}
+
+func NewRouter(allowedMethods ...string) chi.Router {
+	r := chi.NewRouter()
+	r.NotFound(NotFound)
+	r.MethodNotAllowed(MethodNotAllowed(allowedMethods...))
+	return r
+}
+
+func NotFound(w http.ResponseWriter, _ *http.Request) {
+	WriteError(w, http.StatusNotFound, "not_found", "resource not found")
+}
+
+func MethodNotAllowed(allowed ...string) http.HandlerFunc {
+	allow := strings.Join(allowed, ", ")
+	return func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Allow", allow)
+		WriteError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed on this resource")
+	}
 }
 
 func WriteError(w http.ResponseWriter, status int, code, message string) {

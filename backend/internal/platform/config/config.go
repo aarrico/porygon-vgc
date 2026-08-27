@@ -1,5 +1,3 @@
-// Package config loads process configuration from the environment (12-factor).
-// No configuration file is read; Load fails before the process binds a port.
 package config
 
 import (
@@ -11,12 +9,14 @@ import (
 const (
 	defaultHTTPAddr = ":8080"
 	defaultLogLevel = "info"
+	defaultDataSet  = "gen-9"
 )
 
 type Config struct {
 	DatabaseURL string
 	HTTPAddr    string
 	LogLevel    string
+	DataSet     string
 }
 
 func Load() (Config, error) {
@@ -26,6 +26,7 @@ func Load() (Config, error) {
 		DatabaseURL: os.Getenv("DATABASE_URL"),
 		HTTPAddr:    envOr("HTTP_ADDR", defaultHTTPAddr),
 		LogLevel:    envOr("LOG_LEVEL", defaultLogLevel),
+		DataSet:     envOr("DATA_SET", defaultDataSet),
 	}
 
 	if cfg.DatabaseURL == "" {
