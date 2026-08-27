@@ -1,6 +1,6 @@
 module github.com/aarrico/porygon-vgc/backend
 
-go 1.26.6
+go 1.27.0
 
 require (
 	github.com/felixge/httpsnoop v1.1.0

@@ -1,0 +1,11 @@
+DROP TABLE item;
+DROP TABLE ability;
+DROP TABLE move_stat_change;
+DROP TABLE move_meta;
+DROP TABLE move;
+DROP TABLE species;
+DROP TABLE nature;
+DROP TABLE stat;
+DROP TABLE type;
+DROP TABLE generation;
+DROP TABLE data_set;

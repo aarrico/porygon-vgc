@@ -11,15 +11,23 @@ WAIT_TIMEOUT ?= 120
 # verify's prerequisites are ordered; -j must not interleave them.
 .NOTPARALLEL:
 
-.PHONY: help up down clean logs build vet test lint fmt tidy health verify
+.PHONY: help up migrate etl down clean logs build vet test lint fmt tidy health verify
 
 ## help: list the available targets
 help:
 	@grep -hE '^## [a-z-]+:' $(MAKEFILE_LIST) | sed 's/^## //' | awk -F': ' '{printf "  %-8s %s\n", $$1, $$2}'
 
-## up: build images and bring the stack up, blocking until both are healthy
+## up: build images, migrate, and bring the stack up, blocking until healthy
 up:
 	$(COMPOSE) up -d --build --wait --wait-timeout $(WAIT_TIMEOUT)
+
+## migrate: apply outstanding migrations without restarting the stack
+migrate:
+	$(COMPOSE) run --rm migrate
+
+## etl: load the pinned PokeAPI dump into the core reference schema
+etl:
+	$(COMPOSE) run --rm etl
 
 ## down: tear the stack down; the named volume is retained
 down:

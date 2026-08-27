@@ -29,7 +29,7 @@ Named per the PRD's constraint that resume-gap technologies (queuing, IaC, traci
 
 | Name | Version | Relevant ADR |
 | --- | --- | --- |
-| Go | 1.26.6 | AD-1 |
+| Go | 1.27.x | AD-1 |
 | PostgreSQL | 18.x | AD-6 |
 | Docker Compose | v2 plugin | AD-11 |
 | Terraform | current stable (BSL-licensed; OpenTofu considered, not adopted) | AD-11 |
