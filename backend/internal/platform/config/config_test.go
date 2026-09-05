@@ -21,6 +21,7 @@ func TestLoadDefaults(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://user:pass@localhost:5432/db")
 	t.Setenv("HTTP_ADDR", "")
 	t.Setenv("LOG_LEVEL", "")
+	t.Setenv("DATA_SET", "")
 
 	cfg, err := Load()
 	if err != nil {
@@ -32,12 +33,16 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.LogLevel != defaultLogLevel {
 		t.Errorf("LogLevel = %q, want %q", cfg.LogLevel, defaultLogLevel)
 	}
+	if cfg.DataSet != defaultDataSet {
+		t.Errorf("DataSet = %q, want %q", cfg.DataSet, defaultDataSet)
+	}
 }
 
 func TestLoadOverrides(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://user:pass@postgres:5432/db")
 	t.Setenv("HTTP_ADDR", ":9090")
 	t.Setenv("LOG_LEVEL", "debug")
+	t.Setenv("DATA_SET", "champions")
 
 	cfg, err := Load()
 	if err != nil {
@@ -48,5 +53,8 @@ func TestLoadOverrides(t *testing.T) {
 	}
 	if cfg.LogLevel != "debug" {
 		t.Errorf("LogLevel = %q, want debug", cfg.LogLevel)
+	}
+	if cfg.DataSet != "champions" {
+		t.Errorf("DataSet = %q, want champions", cfg.DataSet)
 	}
 }

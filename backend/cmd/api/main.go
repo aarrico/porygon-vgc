@@ -10,16 +10,14 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
-
-	"github.com/go-chi/chi/v5"
 
 	"github.com/aarrico/porygon-vgc/backend/internal/platform/config"
 	"github.com/aarrico/porygon-vgc/backend/internal/platform/httpx"
 	"github.com/aarrico/porygon-vgc/backend/internal/platform/logging"
 	"github.com/aarrico/porygon-vgc/backend/internal/platform/postgres"
+	"github.com/aarrico/porygon-vgc/backend/internal/pokedex"
 )
 
 const (
@@ -56,9 +54,11 @@ func run() error {
 	}
 	defer pool.Close()
 
+	pokedexRouter := pokedex.Router(logger, pokedex.NewStore(pool), cfg.DataSet)
+
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
-		Handler:           newHandler(logger, postgres.NewPinger(pool)),
+		Handler:           newHandler(logger, postgres.NewPinger(pool), pokedexRouter),
 		ReadHeaderTimeout: readHeaderTimeout,
 		ReadTimeout:       readTimeout,
 		WriteTimeout:      writeTimeout,
@@ -119,15 +119,14 @@ func serve(ctx context.Context, srv *http.Server, ln net.Listener, stop func(), 
 	return nil
 }
 
-func newHandler(logger *slog.Logger, pinger postgres.Pinger) http.Handler {
-	r := chi.NewRouter()
+func newHandler(logger *slog.Logger, pinger postgres.Pinger, pokedexRouter http.Handler) http.Handler {
+	r := httpx.NewRouter(http.MethodGet, http.MethodHead)
 	r.Use(httpx.RequestLogger(logger), httpx.Recoverer(logger))
 
 	r.Get("/healthz", healthHandler(logger, pinger))
 	r.Head("/healthz", healthHandler(logger, pinger))
 
-	r.NotFound(notFoundHandler)
-	r.MethodNotAllowed(methodNotAllowedHandler(http.MethodGet, http.MethodHead))
+	r.Mount("/v1", pokedexRouter)
 
 	return r
 }
@@ -146,17 +145,5 @@ func healthHandler(logger *slog.Logger, pinger postgres.Pinger) http.HandlerFunc
 		}
 
 		httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
-	}
-}
-
-func notFoundHandler(w http.ResponseWriter, _ *http.Request) {
-	httpx.WriteError(w, http.StatusNotFound, "not_found", "resource not found")
-}
-
-func methodNotAllowedHandler(allowed ...string) http.HandlerFunc {
-	allow := strings.Join(allowed, ", ")
-	return func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Allow", allow)
-		httpx.WriteError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed on this resource")
 	}
 }

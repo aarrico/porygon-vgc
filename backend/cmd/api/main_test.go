@@ -17,7 +17,13 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/aarrico/porygon-vgc/backend/internal/platform/httpx"
 )
+
+func stubPokedexRouter() http.Handler {
+	return httpx.NewRouter(http.MethodGet, http.MethodHead)
+}
 
 // subprocessEnv makes the test binary run as the api binary instead of running
 // tests, so the signal wiring and the fail-fast boot path are exercised for
@@ -145,7 +151,7 @@ func TestRoutes(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			h := newHandler(discardLogger(), tc.pinger)
+			h := newHandler(discardLogger(), tc.pinger, stubPokedexRouter())
 			rec := httptest.NewRecorder()
 			h.ServeHTTP(rec, httptest.NewRequest(tc.method, tc.path, nil))
 
@@ -178,7 +184,7 @@ func TestRoutes(t *testing.T) {
 // A hung database must not hang the handler: the ping runs under a bounded
 // context and the request still answers 503.
 func TestHealthPingTimeout(t *testing.T) {
-	h := newHandler(discardLogger(), stubPinger{block: 2 * healthPingTimeout})
+	h := newHandler(discardLogger(), stubPinger{block: 2 * healthPingTimeout}, stubPokedexRouter())
 	rec := httptest.NewRecorder()
 
 	done := make(chan struct{})

@@ -11,7 +11,7 @@ WAIT_TIMEOUT ?= 120
 # verify's prerequisites are ordered; -j must not interleave them.
 .NOTPARALLEL:
 
-.PHONY: help up migrate etl down clean logs build vet test lint fmt tidy health verify
+.PHONY: help up migrate etl down clean logs build vet test lint fmt tidy generate health verify
 
 ## help: list the available targets
 help:
@@ -64,6 +64,10 @@ fmt:
 ## tidy: reconcile go.mod and go.sum with the imports
 tidy:
 	cd backend && go mod tidy
+
+## generate: regenerate sqlc-typed query code from internal/*/queries
+generate:
+	cd backend && sqlc generate
 
 ## health: print the /healthz body and status, whatever the status is
 health:
