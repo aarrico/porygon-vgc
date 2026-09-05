@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -18,6 +17,7 @@ type searcher interface {
 	SearchMoves(ctx context.Context, name, dataSet string) ([]Move, error)
 	SearchAbilities(ctx context.Context, name, dataSet string) ([]Ability, error)
 	SearchItems(ctx context.Context, name, dataSet string) ([]Item, error)
+	SearchMovesByEffect(ctx context.Context, q EffectQuery, dataSet string) ([]MoveWithEffect, error)
 }
 
 func Router(logger *slog.Logger, s searcher, defaultDataSet string) chi.Router {
@@ -30,6 +30,10 @@ func Router(logger *slog.Logger, s searcher, defaultDataSet string) chi.Router {
 	moves := versionedSearchHandler(logger, defaultDataSet, s.SearchMoves)
 	r.Get("/moves", moves)
 	r.Head("/moves", moves)
+
+	effects := effectSearchHandler(logger, defaultDataSet, s.SearchMovesByEffect)
+	r.Get("/moves/search", effects)
+	r.Head("/moves/search", effects)
 
 	abilities := versionedSearchHandler(logger, defaultDataSet, s.SearchAbilities)
 	r.Get("/abilities", abilities)
@@ -69,10 +73,7 @@ func versionedSearchHandler[T any](logger *slog.Logger, defaultDataSet string, s
 			return
 		}
 
-		dataSet := strings.TrimSpace(r.URL.Query().Get("data_set"))
-		if dataSet == "" {
-			dataSet = defaultDataSet
-		}
+		dataSet := resolveDataSet(r, defaultDataSet)
 
 		results, err := search(r.Context(), name, dataSet)
 		if err != nil {
@@ -86,5 +87,38 @@ func versionedSearchHandler[T any](logger *slog.Logger, defaultDataSet string, s
 		}
 
 		httpx.WriteJSON(w, http.StatusOK, versionedResponse[T]{DataSet: dataSet, Results: results, Count: len(results)})
+	}
+}
+
+func effectSearchHandler(logger *slog.Logger, defaultDataSet string, search func(ctx context.Context, q EffectQuery, dataSet string) ([]MoveWithEffect, error)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		raw := r.URL.Query()["effect"]
+		if len(raw) == 0 {
+			httpx.WriteError(w, http.StatusBadRequest, "invalid_request", "effect query parameter is required")
+			return
+		}
+		q, err := ParseEffects(raw)
+		if err != nil {
+			httpx.WriteError(w, http.StatusBadRequest, "invalid_effect", err.Error())
+			return
+		}
+		dataSet := resolveDataSet(r, defaultDataSet)
+
+		results, err := search(r.Context(), q, dataSet)
+		if err != nil {
+			var invalid *InvalidEffectError
+			switch {
+			case errors.As(err, &invalid):
+				httpx.WriteError(w, http.StatusBadRequest, "invalid_effect", invalid.Error())
+			case errors.Is(err, ErrDataSetNotFound):
+				httpx.WriteError(w, http.StatusBadRequest, "unknown_data_set", fmt.Sprintf("data set %q not found", dataSet))
+			default:
+				logger.Error("pokedex effect search failed", "error", err)
+				httpx.WriteError(w, http.StatusInternalServerError, httpx.CodeInternalError, "internal server error")
+			}
+			return
+		}
+
+		httpx.WriteJSON(w, http.StatusOK, versionedResponse[MoveWithEffect]{DataSet: dataSet, Results: results, Count: len(results)})
 	}
 }
