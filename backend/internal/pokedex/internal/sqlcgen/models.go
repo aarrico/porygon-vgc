@@ -90,8 +90,7 @@ type Species struct {
 	BaseSpecialAttack  int16
 	BaseSpecialDefense int16
 	BaseSpeed          int16
-} // MethodNotAllowed returns a handler reporting which methods the matched
-// route accepts.
+}
 
 type Stat struct {
 	ID           int64
