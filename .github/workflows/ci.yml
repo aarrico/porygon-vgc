@@ -159,6 +159,15 @@ jobs:
           export TEST_DATABASE_URL="postgres://porygon_app:${PORYGON_APP_PASSWORD}@127.0.0.1:${POSTGRES_PORT:-5432}/${POSTGRES_DB}?sslmode=disable"
           cd backend && go test -race -cover ./internal/pokedex/...
 
+      - name: structured effect search over /v1 (Story 1.3)
+        run: |
+          body=$(curl -sf 'http://localhost:8080/v1/moves/search?effect=stat:attack:2')
+          echo "$body"
+          test "$(echo "$body" | jq -r '.count')" = "7"
+          echo "$body" | jq -e '.results[] | select(.identifier == "swords-dance") | .effect.stat_changes[] | select(.stat == "attack" and .change == 2)' >/dev/null
+          status=$(curl -s -o /dev/null -w '%{http_code}' 'http://localhost:8080/v1/moves/search?effect=stat:atk:2')
+          test "$status" = "400"
+
       - name: postgres down answers 503, api stays up
         run: |
           docker compose -f deploy/compose/docker-compose.yml stop postgres

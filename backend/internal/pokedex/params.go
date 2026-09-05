@@ -10,6 +10,13 @@ func requireName(r *http.Request) (string, bool) {
 	return name, name != ""
 }
 
+func resolveDataSet(r *http.Request, defaultDataSet string) string {
+	if dataSet := strings.TrimSpace(r.URL.Query().Get("data_set")); dataSet != "" {
+		return dataSet
+	}
+	return defaultDataSet
+}
+
 var likeEscaper = strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
 
 func likePattern(name string) string {

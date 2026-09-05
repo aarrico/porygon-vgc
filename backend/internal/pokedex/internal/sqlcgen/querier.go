@@ -10,9 +10,13 @@ import (
 
 type Querier interface {
 	FindDataSetByIdentifier(ctx context.Context, identifier string) (DataSet, error)
+	ListMoveStatChanges(ctx context.Context, moveIds []int64) ([]ListMoveStatChangesRow, error)
+	ListUnknownAilments(ctx context.Context, ailments []string) ([]string, error)
+	ListUnknownStats(ctx context.Context, identifiers []string) ([]string, error)
 	SearchAbilities(ctx context.Context, arg SearchAbilitiesParams) ([]SearchAbilitiesRow, error)
 	SearchItems(ctx context.Context, arg SearchItemsParams) ([]SearchItemsRow, error)
 	SearchMoves(ctx context.Context, arg SearchMovesParams) ([]SearchMovesRow, error)
+	SearchMovesByEffect(ctx context.Context, arg SearchMovesByEffectParams) ([]SearchMovesByEffectRow, error)
 	SearchSpecies(ctx context.Context, pattern string) ([]SearchSpeciesRow, error)
 }
 
