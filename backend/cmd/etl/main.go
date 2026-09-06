@@ -1,5 +1,5 @@
-// Command etl loads the pinned PokeAPI CSV dump into the core reference
-// schema. It is a separate binary from the api because only the ETL role may
+// Command etl loads the pinned PokeAPI CSV dump and the Champions game dump
+// into the core reference schema. It is a separate binary from the api because only the ETL role may
 // write those tables (AD-6).
 package main
 
@@ -56,20 +56,25 @@ func run() error {
 	}
 
 	started := time.Now()
-	summary, err := etl.Load(ctx, pool, dataSet)
+	summaries, err := etl.Load(ctx, pool, dataSet)
 	if err != nil {
 		return err
 	}
 
-	// Grouped: a table named data_set would otherwise collide with the
-	// data_set field naming the load.
-	rows := make([]any, 0, len(summary.Rows)*2)
-	for _, table := range slices.Sorted(maps.Keys(summary.Rows)) {
-		rows = append(rows, table, summary.Rows[table])
+	for _, summary := range summaries {
+		// Grouped: a table named data_set would otherwise collide with the
+		// data_set field naming the load.
+		rows := make([]any, 0, len(summary.Rows)*2)
+		for _, table := range slices.Sorted(maps.Keys(summary.Rows)) {
+			rows = append(rows, table, summary.Rows[table])
+		}
+		logger.Info("etl load complete",
+			"data_set", summary.DataSet,
+			"duration_ms", time.Since(started).Milliseconds(),
+			slog.Group("rows", rows...))
+		for _, s := range summary.Skipped {
+			logger.Warn("etl skipped source data", "data_set", summary.DataSet, "detail", s)
+		}
 	}
-	logger.Info("etl load complete",
-		"data_set", summary.DataSet,
-		"duration_ms", time.Since(started).Milliseconds(),
-		slog.Group("rows", rows...))
 	return nil
 }

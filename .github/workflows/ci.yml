@@ -138,7 +138,7 @@ jobs:
           }
           # Exact counts pin the dump: a re-pin that shifts them fails here.
           species=$(query "SELECT count(*) FROM species")
-          moves=$(query "SELECT count(*) FROM move")
+          moves=$(query "SELECT count(*) FROM move m JOIN data_set d ON d.id = m.data_set_id WHERE d.identifier = 'gen-9'")
           echo "species=$species moves=$moves"
           test "$species" = "1351"
           test "$moves" = "919"
@@ -150,6 +150,19 @@ jobs:
                         WHERE s.identifier = 'attack' AND msc.change = 2
                           AND m.identifier = 'swords-dance'")
           test "$hit" = "swords-dance"
+
+          # The Champions Data Set is a child of gen-9 built from the game
+          # dump: its own roster, its own move values, inherited effect rows.
+          champions=$(query "SELECT p.identifier || ' ' || (SELECT count(*) FROM move WHERE data_set_id = d.id)
+                                 || ' ' || (SELECT count(*) FROM ability WHERE data_set_id = d.id)
+                                 || ' ' || (SELECT count(*) FROM item WHERE data_set_id = d.id)
+                               FROM data_set d JOIN data_set p ON p.id = d.parent_id
+                              WHERE d.identifier = 'champions'")
+          echo "champions=$champions"
+          test "$champions" = "gen-9 497 200 148"
+          beak=$(query "SELECT m.power || '/' || m.pp FROM move m JOIN data_set d ON d.id = m.data_set_id
+                         WHERE d.identifier = 'champions' AND m.identifier = 'beak-blast'")
+          test "$beak" = "120/8"
 
       - name: pokedex live-database tests
         run: |
@@ -163,7 +176,8 @@ jobs:
         run: |
           body=$(curl -sf 'http://localhost:8080/v1/moves/search?effect=stat:attack:2')
           echo "$body"
-          test "$(echo "$body" | jq -r '.count')" = "7"
+          test "$(echo "$body" | jq -r '.data_set')" = "champions"
+          test "$(echo "$body" | jq -r '.count')" = "5"
           echo "$body" | jq -e '.results[] | select(.identifier == "swords-dance") | .effect.stat_changes[] | select(.stat == "attack" and .change == 2)' >/dev/null
           status=$(curl -s -o /dev/null -w '%{http_code}' 'http://localhost:8080/v1/moves/search?effect=stat:atk:2')
           test "$status" = "400"

@@ -22,6 +22,7 @@ Backfilled 2026-08-20 from the BMAD-produced architecture spine (`ARCHITECTURE-S
 | [0014](0014-pokeapi-csv-as-core-data-source.md) | PokeAPI CSV dump as the core reference data source | accepted | 2026-08-19 |
 | [0015](0015-data-set-snapshot-versioning-model.md) | Data Set snapshot/lineage model for versioned reference tables | accepted | 2026-08-19 |
 | [0016](0016-chi-router-for-multi-capability-routing.md) | chi router for multi-capability routing | accepted | 2026-08-20 |
+| [0017](0017-champout-as-champions-data-source.md) | Champions reference data from the projectpokemon/champout game dump | accepted | 2026-09-05 |
 
 ## Stack (current pins)
 

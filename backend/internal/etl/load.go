@@ -11,32 +11,46 @@ import (
 type Summary struct {
 	DataSet string
 	Rows    map[string]int
+	// Skipped names data the source carries that the schema could not take
+	// without guessing at the rest of the row.
+	Skipped []string
 }
 
-// Load writes the whole dump in one transaction, so a failure at any table
-// leaves the schema unchanged. Re-running is a no-op on unchanged data.
-func Load(ctx context.Context, pool *pgxpool.Pool, dataSet string) (Summary, error) {
+// Load writes the base dump and the Champions Data Set on top of it in one
+// transaction, so a failure at any table leaves the schema unchanged.
+// Re-running is a no-op on unchanged data.
+func Load(ctx context.Context, pool *pgxpool.Pool, dataSet string) ([]Summary, error) {
 	tx, err := pool.Begin(ctx)
 	if err != nil {
-		return Summary{}, fmt.Errorf("etl: begin: %w", err)
+		return nil, fmt.Errorf("etl: begin: %w", err)
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck // no-op once Commit has succeeded
 
-	l := &loader{tx: tx, rows: map[string]int{}}
-	if err := l.run(ctx, dataSet); err != nil {
-		return Summary{}, err
+	base := &loader{tx: tx, rows: map[string]int{}}
+	if err := base.run(ctx, dataSet); err != nil {
+		return nil, err
+	}
+	champions := &loader{tx: tx, rows: map[string]int{}, parent: base.dataSet,
+		generation: base.generation, typ: base.typ, stat: base.stat}
+	if err := champions.runChampions(ctx); err != nil {
+		return nil, err
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return Summary{}, fmt.Errorf("etl: commit: %w", err)
+		return nil, fmt.Errorf("etl: commit: %w", err)
 	}
-	return Summary{DataSet: dataSet, Rows: l.rows}, nil
+	return []Summary{
+		{DataSet: dataSet, Rows: base.rows},
+		{DataSet: championsDataSet, Rows: champions.rows, Skipped: champions.skipped},
+	}, nil
 }
 
 type loader struct {
 	tx      pgx.Tx
 	rows    map[string]int
 	dataSet int64
+	parent  int64
+	skipped []string
 
 	// PokeAPI id -> database id, for the tables other CSVs reference by id.
 	generation map[string]int64
