@@ -4,7 +4,7 @@ Pokemon VGC team-building tool: Pokedex/effect search, damage calc, team recomme
 
 Three deployable pieces, each its own stack:
 
-- `backend/` — Go modular monolith. Active. See [backend/CLAUDE.md](backend/CLAUDE.md) for Go-specific conventions.
+- `backend/` — Go modular monolith. Active. See [backend/AGENTS.md](backend/AGENTS.md) for Go-specific conventions.
 - `analytics/` — Python gRPC service. Not started, furthest out on the roadmap.
 - `frontend/` — React Native (web & mobile). Reserved, Phase 2, not started.
 
@@ -22,17 +22,17 @@ Three deployable pieces, each its own stack:
 - Original project intent: [docs/vision.md](docs/vision.md) — superseded by docs/PRD.md on scope/sequencing where they conflict, still authoritative on longer-term direction.
 - `docs/research/` — domain research backing a specific ADR (e.g. the Champions-regulation data model behind AD-15).
 - `docs/reviews/` — review guides for specific chunks of code pending review, cross-referenced by file:line.
-- Repo-wide subagents live in `.claude/agents/` (this directory). They're
+- Repo-wide subagents live in `.Codex/agents/` (this directory). They're
   process definitions (review, planning, security) — stack-specific
   knowledge comes from AGENTS.md, the package READMEs, and the ADRs, not
   from duplicating agents per subsystem.
-- `backend/` has its own `.claude/settings.json` and `.claude/skills/`,
+- `backend/` has its own `.Codex/settings.json` and `.Codex/skills/`,
   self-contained since project settings don't inherit from this file's
-  directory. Launch Claude from `backend/` for backend-only work — you'll
-  get this file plus `backend/CLAUDE.md`, and none of `frontend/`'s or
+  directory. Launch Codex from `backend/` for backend-only work — you'll
+  get this file plus `backend/AGENTS.md`, and none of `frontend/`'s or
   `analytics/`'s context.
 - `frontend/` and `analytics/` are reserved/not-started (see their
-  READMEs) and deliberately have no Claude Code config yet — add it when
+  READMEs) and deliberately have no Codex config yet — add it when
   those phases actually start, matching the pattern in `backend/`.
 
 
